@@ -1,0 +1,72 @@
+__include__: [
+  './dfine/dfine_hgnetv2_s_custom.yml',
+  './dataset/visdrone.yml',
+  './base/deim.yml'
+]
+
+print_freq: 500
+output_dir: ./outputs/visdrone/full
+
+model: DEIM_MG
+
+DEIM_MG:
+  yaml_path: ./configs/models/full.yaml
+
+eval_spatial_size: [800, 800]
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.0001
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.0001
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  weight_decay: 0.001
+
+epoches: 300
+
+flat_epoch: 154
+no_aug_epoch: 12
+lr_gamma: 1.0
+
+train_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Mosaic, output_size: 400, rotation_range: 10, translation_range: [0.1, 0.1], scaling_range: [0.5, 1.5],
+           probability: 1.0, fill_value: 0, use_cache: False, max_cached_images: 50, random_pop: True}
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [800, 800], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        epoch: [4,154, 268]
+
+  collate_fn:
+    mixup_epochs: [4, 154]
+    stop_epoch: 268
+    base_size: 800
+    base_size_repeat: ~
+  total_batch_size: 4
+
+val_dataloader:
+  dataset:
+    transforms:
+      ops:
+        - {type: Resize, size: [800, 800], }
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+  total_batch_size: 4

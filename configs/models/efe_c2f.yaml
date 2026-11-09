@@ -1,0 +1,46 @@
+backbone:
+
+  - [-1, Conv, [64, 3, 2]]
+  - [-1, Conv, [128, 3, 2]]
+
+  - [-1, EFEAHRCompare, [128, 1, 8, 0.1, 'c2f', 'none']]
+
+  - [-1, Conv, [256, 3, 2]]
+  - [-1, EFEAHRCompare, [256, 1, 8, 0.1, 'c2f', 'none']]
+
+  - [-1, Conv, [384, 3, 2]]
+  - [-1, EFEAHRCompare, [384, 1, 8, 0.1, 'c2f', 'none']]
+
+  - [-1, Conv, [512, 3, 2]]
+  - [-1, EFEAHRCompare, [512, 1, 8, 0.1, 'c2f', 'none']]
+
+encoder:
+
+  - [4, ConvNormLayer_fuse, [256, 1, 1]]
+  - [6, ConvNormLayer_fuse, [256, 1, 1]]
+  - [8, ConvNormLayer_fuse, [256, 1, 1]]
+
+  - [-1, TransformerEncoderBlock, [8, 512, 0.1, "relu", 10000, False]]
+
+  - [-1, ConvNormLayer_fuse, [256, 1, 1]]
+  - [-1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 10], Concat, []]
+
+  - [-1, RepNCSPELAN4, [256, 256, 48, 1, False, 'silu']]
+
+  - [-1, ConvNormLayer_fuse, [256, 1, 1]]
+  - [-1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 9], Concat, []]
+  - [-1, RepNCSPELAN4, [256, 256, 48, 1, False, 'silu']]
+
+  - [-1, SCDown, [256, 3, 2, 'silu']]
+  - [[-1, 17], Concat, []]
+  - [-1, RepNCSPELAN4, [256, 256, 48, 1, False, 'silu']]
+
+  - [-1, SCDown, [256, 3, 2, 'silu']]
+  - [[-1, 13], Concat, []]
+  - [-1, RepNCSPELAN4, [256, 256, 48, 1, False, 'silu']]
+
+decoder:
+
+  - [[20, 23, 26], DFINETransformer, {"feat_strides":[8, 16, 32], "hidden_dim": 256, "num_levels": 3, "num_layers": 3, "num_points": [3, 6, 3], "dim_feedforward": 512}]
